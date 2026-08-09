@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { LoaderCircle, Radio } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -51,17 +51,8 @@ export default function AuthCallbackPage() {
                 console.log("✅ LOGIN SUCCESS");
                 console.log("User:", data.user);
 
-                /*
-                 * IMPORTANT:
-                 *
-                 * Do a full browser navigation.
-                 *
-                 * This forces AuthProvider to mount again.
-                 * On mount, AuthProvider calls /auth/me.
-                 *
-                 * The auth cookie has already been created by
-                 * /auth/exchange at this point.
-                 */
+                // Force a complete navigation so AuthProvider
+                // mounts again and calls /auth/me with the new cookie.
                 window.location.replace("/");
             } catch (error) {
                 console.error("❌ Authentication error:", error);
@@ -132,7 +123,6 @@ export default function AuthCallbackPage() {
 
                 <div className="mt-10 flex items-center gap-3 border-t border-white/10 pt-5 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-
                     Connection encrypted
 
                     <span className="ml-auto text-zinc-600">
@@ -141,5 +131,24 @@ export default function AuthCallbackPage() {
                 </div>
             </section>
         </main>
+    );
+}
+
+function AuthCallbackLoading() {
+    return (
+        <main className="flex min-h-screen items-center justify-center bg-[#090a0d] text-zinc-100">
+            <LoaderCircle
+                className="h-8 w-8 animate-spin text-cyan-300"
+                strokeWidth={1.5}
+            />
+        </main>
+    );
+}
+
+export default function AuthCallbackPage() {
+    return (
+        <Suspense fallback={<AuthCallbackLoading />}>
+            <AuthCallbackContent />
+        </Suspense>
     );
 }
