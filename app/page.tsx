@@ -1,65 +1,48 @@
-import Image from "next/image";
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="relative min-h-screen overflow-hidden text-white">
+      <div className="absolute inset-0 bg-cover bg-center opacity-90" style={{ backgroundImage: "url('/BACKGROUND2.jpg')" }} />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.30),rgba(0,0,0,0.92))]" />
+      <div className="relative z-10 px-6 py-20 lg:px-12">
+        <style>{`
+          @keyframes hero-slide-up {
+            from { opacity: 0; transform: translateY(32px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .slide-up {
+            animation: hero-slide-up 1s ease-out forwards;
+          }
+          .slide-up-delay {
+            animation: hero-slide-up 1s ease-out 0.2s forwards;
+          }
+          .slide-up-delay-2 {
+            animation: hero-slide-up 1s ease-out 0.35s forwards;
+          }
+        `}</style>
+        <div className="mx-auto max-w-6xl">
+         
+          <h1 className="slide-up-delay mt-8 text-5xl font-black tracking-tight text-slate-100 sm:text-6xl opacity-0">
+           ASRT.CO
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
+          {/* <p className="slide-up-delay-2 mt-6 max-w-3xl text-lg leading-8 text-slate-300 sm:text-xl opacity-0">
+            Competitive sim racing platform. Championships, verified leaderboards and race craft — built for drivers who chase tenths.
+          </p> */}
+          <div className="slide-up-delay-2 mt-10 flex flex-col gap-4 sm:flex-row sm:items-center opacity-0">
             <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href="#events"
+              className="inline-flex items-center justify-center rounded-full bg-cyan-400 px-8 py-3 text-sm font-semibold text-slate-950 shadow-[0_30px_60px_-30px_rgba(56,189,248,0.85)] transition duration-200 hover:bg-cyan-300"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
+              View Events
+            </a>
             <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href="#leaderboard"
+              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-8 py-3 text-sm font-semibold text-slate-100 transition duration-200 hover:bg-white/10"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              Leaderboard
+            </a>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
