@@ -40,15 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error("NEXT_PUBLIC_API_URL is not configured");
         }
 
-        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-        const headers: Record<string, string> = {};
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
         const response = await fetch(`${API_URL}/auth/me`, {
           method: "GET",
-          headers,
           credentials: "include",
         });
 
@@ -74,9 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token");
-    }
     setUser(null);
     setAdminMode(false);
   };
