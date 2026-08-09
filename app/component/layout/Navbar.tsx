@@ -259,13 +259,13 @@ export default function Navbar() {
       <div
         className="sim-nav-font overflow-hidden transition-all duration-300 ease-out md:hidden"
         style={{
-          maxHeight: mobileOpen ? "320px" : "0px",
+          maxHeight: mobileOpen ? "500px" : "0px",
           borderTop: mobileOpen
             ? "1px solid rgba(161,161,170,0.14)"
             : "1px solid transparent",
         }}
       >
-        <div className="flex flex-col gap-1 px-6 py-3">
+        <div className="flex flex-col gap-2 px-6 py-4">
           {LINKS.map((link) => {
             const isActive = active === link.label;
             return (
@@ -276,7 +276,7 @@ export default function Navbar() {
                   setActive(link.label);
                   setMobileOpen(false);
                 }}
-                className="rounded-md px-3 py-2.5 text-sm font-medium"
+                className="rounded-md px-3 py-2 text-sm font-medium"
                 style={{
                   color: isActive ? "#f4f4f5" : "#8a8a92",
                   background: isActive
@@ -291,6 +291,111 @@ export default function Navbar() {
               </Link>
             );
           })}
+
+          <div className="my-1 border-t border-white/10" />
+
+          {/* Mobile buttons */}
+          <div className="flex flex-col gap-2.5 pt-1">
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                apiClient.auth.steamLogin();
+              }}
+              className="sim-nav-font inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-cyan-400 px-4 py-2 text-xs font-semibold text-slate-950 transition duration-200 hover:bg-cyan-300 shadow-[0_12px_40px_-24px_rgba(56,189,248,0.9)]"
+            >
+              <Image
+                src="/LOGIN/steam-icon-14867.png"
+                alt="Steam"
+                width={24}
+                height={24}
+                className="h-6 w-6 rounded-full border border-white/20 bg-slate-950"
+              />
+              Sign in with Steam
+            </button>
+
+            <Link
+              href="https://discord.gg/cCSnjPXkK"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setMobileOpen(false)}
+              className="sim-nav-font inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-[#5865F2] px-4 py-2 text-xs font-semibold text-white transition duration-200 hover:bg-[#4550C1]"
+              style={{
+                boxShadow: "0 12px 40px -24px rgba(88,101,242,0.9)",
+              }}
+            >
+              <Image
+                src="/discord.png"
+                alt="Discord"
+                width={24}
+                height={24}
+                className="h-6 w-6 rounded-full border border-white/20 bg-white"
+              />
+              Join Discord
+            </Link>
+
+            {user && user.role === "admin" && (
+              <div className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
+                <span className="text-xs font-semibold text-white">
+                  {adminMode ? "Admin Mode" : "User Mode"}
+                </span>
+                <Switch
+                  isSelected={adminMode}
+                  onChange={setAdminMode}
+                  aria-label="Toggle admin mode"
+                  className="sim-nav-font shrink-0"
+                >
+                  <Switch.Content>
+                    <Switch.Control className="h-6 w-11 overflow-hidden rounded-full bg-white/20 p-1 data-[selected=true]:bg-blue-600">
+                      <Switch.Thumb
+                        className="!m-0 !shrink-0 rounded-full"
+                        style={{
+                          width: "16px",
+                          minWidth: "16px",
+                          height: "16px",
+                          minHeight: "16px",
+                          display: "block",
+                          flexShrink: 0,
+                          borderRadius: "9999px",
+                          backgroundColor: "#ffffff",
+                          transform: adminMode ? "translateX(20px)" : "translateX(0)",
+                          transition: "transform 200ms ease",
+                          zIndex: 1,
+                        }}
+                      />
+                    </Switch.Control>
+                  </Switch.Content>
+                </Switch>
+              </div>
+            )}
+
+            <Link
+              href="/profile"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              {user?.avatar ? (
+                <Image
+                  src={user.avatar}
+                  alt={user.username}
+                  width={32}
+                  height={32}
+                  unoptimized
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+              )}
+              <div className="flex flex-col">
+                <span>{user ? user.username : "Profile"}</span>
+                {user && <span className="text-xs font-normal text-zinc-400 capitalize">{user.role}</span>}
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
     </nav>
