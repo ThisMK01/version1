@@ -239,7 +239,7 @@ export default function Navbar() {
           </Link>
         </div>
         <button
-          className="flex items-center justify-center rounded-md p-2 md:hidden"
+          className="ml-auto flex items-center justify-center rounded-md p-2 md:hidden"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Toggle menu"
           aria-expanded={mobileOpen}
