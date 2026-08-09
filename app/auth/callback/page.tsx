@@ -1,13 +1,12 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { LoaderCircle, Radio } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-function AuthCallbackContent() {
-    const router = useRouter();
+export default function AuthCallbackPage() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -16,11 +15,19 @@ function AuthCallbackContent() {
 
             if (!code) {
                 console.error("❌ No authentication code");
-                router.replace("/");
+                window.location.replace("/");
+                return;
+            }
+
+            if (!API_URL) {
+                console.error("❌ NEXT_PUBLIC_API_URL is missing");
+                window.location.replace("/");
                 return;
             }
 
             try {
+                console.log("🔥 Exchanging authentication code...");
+
                 const response = await fetch(
                     `${API_URL}/auth/exchange?code=${encodeURIComponent(code)}`,
                     {
@@ -30,8 +37,12 @@ function AuthCallbackContent() {
                 );
 
                 if (!response.ok) {
-                    console.error("❌ Authentication exchange failed");
-                    router.replace("/");
+                    console.error(
+                        "❌ Authentication exchange failed:",
+                        response.status
+                    );
+
+                    window.location.replace("/");
                     return;
                 }
 
@@ -40,16 +51,26 @@ function AuthCallbackContent() {
                 console.log("✅ LOGIN SUCCESS");
                 console.log("User:", data.user);
 
-                router.replace("/");
-                router.refresh();
+                /*
+                 * IMPORTANT:
+                 *
+                 * Do a full browser navigation.
+                 *
+                 * This forces AuthProvider to mount again.
+                 * On mount, AuthProvider calls /auth/me.
+                 *
+                 * The auth cookie has already been created by
+                 * /auth/exchange at this point.
+                 */
+                window.location.replace("/");
             } catch (error) {
                 console.error("❌ Authentication error:", error);
-                router.replace("/");
+                window.location.replace("/");
             }
         };
 
         exchangeCode();
-    }, [router, searchParams]);
+    }, [searchParams]);
 
     return (
         <main className="relative flex min-h-[calc(100vh-73px)] items-center justify-center overflow-hidden bg-[#090a0d] px-5 py-12 text-zinc-100">
@@ -87,6 +108,7 @@ function AuthCallbackContent() {
                 <div className="flex flex-col items-center text-center">
                     <div className="relative mb-7 flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/25 bg-cyan-300/5 text-cyan-200">
                         <div className="absolute inset-1 rounded-full border border-dashed border-cyan-200/30" />
+
                         <LoaderCircle
                             className="h-8 w-8 animate-spin"
                             strokeWidth={1.5}
@@ -110,31 +132,14 @@ function AuthCallbackContent() {
 
                 <div className="mt-10 flex items-center gap-3 border-t border-white/10 pt-5 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+
                     Connection encrypted
+
                     <span className="ml-auto text-zinc-600">
                         Please wait
                     </span>
                 </div>
             </section>
-        </main>
-    );
-}
-
-export default function AuthCallbackPage() {
-    return (
-        <Suspense fallback={<AuthCallbackLoading />}>
-            <AuthCallbackContent />
-        </Suspense>
-    );
-}
-
-function AuthCallbackLoading() {
-    return (
-        <main className="flex min-h-screen items-center justify-center bg-[#090a0d] text-zinc-100">
-            <LoaderCircle
-                className="h-8 w-8 animate-spin text-cyan-300"
-                strokeWidth={1.5}
-            />
         </main>
     );
 }

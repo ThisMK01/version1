@@ -157,7 +157,9 @@ export default function Navbar() {
             Sign in with Steam
           </button>
           <Link
-            href="/api/auth/discord/connect"
+            href="https://discord.gg/cCSnjPXkK"
+            target="_blank"
+            rel="noreferrer"
             className="sim-nav-font inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-[#5865F2] px-2 py-1.5 text-xs font-semibold text-white transition duration-200 hover:bg-[#4550C1] hover:text-white lg:px-3"
             style={{
               boxShadow: "0 12px 40px -24px rgba(88,101,242,0.9)",
