@@ -4,11 +4,15 @@ async function apiFetch(
   path: string,
   options: RequestInit = {}
 ) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
   return fetch(`${API_URL}${path}`, {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...authHeader,
       ...(options.headers || {}),
     },
   });

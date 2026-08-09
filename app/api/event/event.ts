@@ -62,6 +62,14 @@ function getApiUrl() {
 	return API_URL;
 }
 
+function getAuthHeaders(additionalHeaders: Record<string, string> = {}): Record<string, string> {
+	const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+	return {
+		...additionalHeaders,
+		...(token ? { Authorization: `Bearer ${token}` } : {}),
+	};
+}
+
 export async function getEvents(): Promise<EventItem[]> {
 	const response = await fetch(`${getApiUrl()}/events`);
 	const data = await readResponse(response);
@@ -92,7 +100,7 @@ export type EventRegistration = {
 export async function registerForEvent(registration: EventRegistration) {
 	const response = await fetch(`${getApiUrl()}/usereventregistration`, {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: getAuthHeaders({ "Content-Type": "application/json" }),
 		credentials: "include",
 		body: JSON.stringify(registration),
 	});
@@ -106,6 +114,7 @@ export async function uploadEventImage(file: File): Promise<string> {
 
 	const response = await fetch(`${getApiUrl()}/events/test-upload`, {
 		method: "POST",
+		headers: getAuthHeaders(),
 		credentials: "include",
 		body: formData,
 	});
@@ -122,7 +131,7 @@ export async function uploadEventImage(file: File): Promise<string> {
 export async function createEvent(eventData: EventForm) {
 	const response = await fetch(`${getApiUrl()}/events`, {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: getAuthHeaders({ "Content-Type": "application/json" }),
 		credentials: "include",
 		body: JSON.stringify(eventData),
 	});
@@ -133,7 +142,7 @@ export async function createEvent(eventData: EventForm) {
 export async function updateEvent(eventId: string, updates: Partial<EventForm>) {
 	const response = await fetch(`${getApiUrl()}/events/${eventId}`, {
 		method: "PUT",
-		headers: { "Content-Type": "application/json" },
+		headers: getAuthHeaders({ "Content-Type": "application/json" }),
 		credentials: "include",
 		body: JSON.stringify(updates),
 	});

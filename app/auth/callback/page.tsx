@@ -48,11 +48,15 @@ function AuthCallbackContent() {
 
                 const data = await response.json();
 
+                if (data.token) {
+                    localStorage.setItem("auth_token", data.token);
+                }
+
                 console.log("✅ LOGIN SUCCESS");
                 console.log("User:", data.user);
 
                 // Force a complete navigation so AuthProvider
-                // mounts again and calls /auth/me with the new cookie.
+                // mounts again and calls /auth/me with the token or cookie.
                 window.location.replace("/");
             } catch (error) {
                 console.error("❌ Authentication error:", error);
