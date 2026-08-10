@@ -31,7 +31,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   console.log("🔥🔥 AUTH PROVIDER IS RUNNING");
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adminMode, setAdminMode] = useState(false);
+  const [adminMode, setAdminModeState] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMode = localStorage.getItem("asrt_admin_mode");
+      if (savedMode !== null) {
+        setAdminModeState(savedMode === "true");
+      }
+    }
+  }, []);
+
+  const setAdminMode = (enabled: boolean) => {
+    const isBool = Boolean(enabled);
+    setAdminModeState(isBool);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("asrt_admin_mode", String(isBool));
+    }
+  };
 
   useEffect(() => {
     const fetchCurrentUser = async () => {

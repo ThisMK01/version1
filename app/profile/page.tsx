@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mail, LogOut, ShieldCheck, UserRound, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarImage, AvatarFallback, Button, Card, CardContent, Chip, Input } from "@heroui/react";
 import { useAuth } from "../context/authContext";
 
 export default function ProfilePage() {
@@ -19,27 +20,29 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0b0b0d] text-sm text-zinc-400">
-        Loading profile...
+      <main className="flex min-h-screen items-center justify-center bg-[#0e131f] text-sm font-mono-data text-cyan-400">
+        <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping mr-2" />
+        LOADING DRIVER TELEMETRY...
       </main>
     );
   }
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0b0b0d] px-6 text-center text-white">
-        <div>
-          <UserRound className="mx-auto mb-4 h-10 w-10 text-zinc-500" />
-          <h1 className="text-2xl font-bold">You are not signed in</h1>
-          <p className="mt-2 text-sm text-zinc-400">Sign in with Steam to view your profile.</p>
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="mt-6 rounded-full bg-cyan-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-          >
-            Return home
-          </button>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-[#0e131f] px-6 text-center text-white">
+        <Card className="bg-[#0e1628] border border-white/10 p-8 max-w-md w-full">
+          <CardContent className="space-y-4 items-center">
+            <UserRound className="h-12 w-12 text-zinc-500" />
+            <h1 className="font-sora text-2xl font-bold">DRIVER NOT AUTHENTICATED</h1>
+            <p className="text-sm font-inter text-zinc-400">Sign in with Steam to access your driver profile and race history.</p>
+            <Button
+              onPress={() => router.push("/")}
+              className="mt-4 bg-cyan-400 text-slate-950 font-sora font-bold text-xs px-6 py-3 rounded-lg glow-hover"
+            >
+              RETURN HOME
+            </Button>
+          </CardContent>
+        </Card>
       </main>
     );
   }
@@ -51,92 +54,125 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0b0b0d] px-6 py-16 text-white sm:px-10 lg:px-16">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(34,211,238,0.13),transparent_32%),radial-gradient(circle_at_88%_82%,rgba(88,101,242,0.12),transparent_30%)]" />
-      <div className="relative mx-auto max-w-5xl">
-        <div className="mb-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">Account</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight text-zinc-100 sm:text-5xl">Your profile</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400">Manage your identity and account details in one place.</p>
+    <main className="relative min-h-screen bg-[#0e131f] px-6 py-16 text-[#dee2f3] lg:px-16">
+      
+      {/* Background Radial Glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(#00d9ff_1px,transparent_1px)] [background-size:32px_32px] opacity-10 pointer-events-none" />
+
+      <div className="relative z-10 max-w-5xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <div className="space-y-2 border-b border-white/10 pb-6">
+          <Chip size="sm" variant="soft" className="bg-cyan-500/10 text-cyan-400 font-mono-data text-xs border border-cyan-500/20">
+            DRIVER TELEMETRY & PROFILE
+          </Chip>
+          <h1 className="font-sora text-4xl font-black text-white tracking-tight sm:text-5xl">
+            Driver Profile
+          </h1>
+          <p className="font-inter text-zinc-400 text-sm max-w-xl">
+            Manage your competitive identity, connected Steam credentials, and notifications.
+          </p>
         </div>
 
-        <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/30 backdrop-blur-xl">
-          <div className="flex flex-col gap-8 border-b border-white/10 p-7 sm:flex-row sm:items-center sm:p-10">
-            <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-4 border-cyan-300/40 bg-zinc-800 shadow-[0_0_35px_rgba(34,211,238,0.2)]">
-              {user.avatar ? (
-                <img src={user.avatar} alt={user.username} className="h-full w-full object-cover" />
-              ) : (
-                <UserRound className="absolute inset-0 m-auto h-12 w-12 text-zinc-500" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Steam account</p>
-              <h2 className="mt-2 truncate text-3xl font-bold text-zinc-100">{user.username}</h2>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                {user.role === "admin" ? "Administrator" : "Verified player"}
+        {/* Profile Card */}
+        <Card className="bg-[#0e1628] border border-white/10 card-inner-border shadow-2xl overflow-hidden">
+          <CardContent className="p-8 sm:p-10 space-y-8">
+            
+            {/* User Identity Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 border-b border-white/10 pb-8">
+              <Avatar className="w-24 h-24 ring-4 ring-cyan-400/40 shadow-[0_0_30px_rgba(0,217,255,0.3)]">
+                {user.avatar ? (
+                  <AvatarImage src={user.avatar} />
+                ) : (
+                  <AvatarFallback className="bg-cyan-500/20 text-cyan-400 font-sora text-2xl">
+                    {user.username?.[0]?.toUpperCase() || "D"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+
+              <div className="space-y-2">
+                <span className="font-mono-data text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                  CONNECTED STEAM ACCOUNT
+                </span>
+                <h2 className="font-sora text-3xl font-bold text-white truncate">
+                  {user.username}
+                </h2>
+                <div>
+                  <Chip
+                    size="sm"
+                    variant="soft"
+                    className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono-data text-xs flex items-center gap-1.5"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>{user.role === "admin" ? "ADMINISTRATOR" : "VERIFIED DRIVER"}</span>
+                  </Chip>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="p-7 sm:p-10">
-            <div className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-black/20 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
-                  <Mail className="h-5 w-5" />
+            {/* Email Section */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 bg-[#0a1020] p-6 rounded-xl border border-white/5">
+              <div className="flex items-start gap-4 flex-1">
+                <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-lg">
+                  <Mail className="w-5 h-5" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-zinc-200">Email address</p>
+                <div className="space-y-1">
+                  <p className="font-sora text-sm font-bold text-white">Contact Email</p>
                   {editingEmail ? (
-                    <input
+                    <Input
                       autoFocus
                       type="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       placeholder="name@example.com"
-                      className="mt-2 w-full max-w-sm rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-300/70"
+                      className="mt-2 max-w-sm bg-[#0e1628] border border-white/15 text-zinc-200 font-mono-data text-xs h-10 rounded-lg px-3"
                     />
                   ) : (
-                    <p className="mt-1 truncate text-sm text-zinc-500">{emailSubmitted ? email : "No email added yet"}</p>
+                    <p className="font-mono-data text-xs text-zinc-400">
+                      {emailSubmitted ? email : "No email linked for notifications"}
+                    </p>
                   )}
                 </div>
               </div>
+
               {editingEmail ? (
-                <button
-                  type="button"
-                  onClick={handleEmailSubmit}
-                  disabled={!email.trim()}
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
+                <Button
+                  size="sm"
+                  onPress={handleEmailSubmit}
+                  isDisabled={!email.trim()}
+                  className="bg-cyan-400 text-slate-950 font-sora font-bold text-xs px-4 py-2 glow-hover flex items-center gap-1"
                 >
-                  <Check className="h-4 w-4" />
-                  Verify email
-                </button>
+                  <Check className="w-4 h-4" />
+                  <span>VERIFY EMAIL</span>
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setEditingEmail(true)}
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-cyan-300/50 hover:bg-cyan-300/10 hover:text-cyan-200"
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onPress={() => setEditingEmail(true)}
+                  className="border-white/15 text-zinc-200 font-mono-data text-xs hover:bg-white/10"
                 >
-                  <Mail className="h-4 w-4" />
-                  Add email
-                </button>
+                  <Mail className="w-4 h-4 mr-1" />
+                  <span>ADD EMAIL</span>
+                </Button>
               )}
             </div>
 
-          </div>
-        </section>
-        <div className="mt-5 flex justify-end">
-          <button
-            type="button"
-            onClick={handleLogout}
-            aria-label="Log out"
-            title="Log out"
-            className="inline-flex items-center gap-2 rounded-full border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-300 transition hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200"
+          </CardContent>
+        </Card>
+
+        {/* Logout Button */}
+        <div className="flex justify-end">
+          <Button
+            variant="danger-soft"
+            onPress={handleLogout}
+            className="bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 font-mono-data text-xs px-6 py-2 rounded-lg flex items-center gap-2"
           >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
+            <LogOut className="w-4 h-4" />
+            <span>LOGOUT SESSION</span>
+          </Button>
         </div>
+
       </div>
     </main>
   );

@@ -2,26 +2,85 @@
 @import "@heroui/styles";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0e131f;
+  --foreground: #dee2f3;
+  --surface: #0a1020;
+  --surface-panel: #0e1628;
+  --surface-elevated: #121c31;
+  --primary: #00d9ff;
+  --primary-glow: rgba(0, 217, 255, 0.35);
+  --border-subtle: rgba(255, 255, 255, 0.08);
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+}
+
+/* Typography Helpers */
+.font-sora {
+  font-family: var(--font-sora), system-ui, sans-serif;
+}
+.font-inter {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+.font-mono-data {
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* Apex Velocity Visual Effects */
+.glow-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glow-hover:hover {
+  box-shadow: 0px 0px 20px rgba(0, 217, 255, 0.4);
+  border-color: #00d9ff;
+}
+
+.glow-cyan {
+  box-shadow: 0px 0px 15px rgba(0, 217, 255, 0.35);
+}
+
+.card-inner-border {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Animated Racing Lights Effect */
+.racing-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.light-streak {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.8), transparent);
+  width: 250px;
+  opacity: 0;
+  animation: streak 3.5s linear infinite;
+}
+
+@keyframes streak {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100vw);
+    opacity: 0;
+  }
 }

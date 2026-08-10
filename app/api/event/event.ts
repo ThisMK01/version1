@@ -4,12 +4,14 @@ export type EventItem = {
 	_id: string;
 	title: string;
 	gameName: string;
-	date: string;
+	startDate: string;
+	endDate?: string;
 	track: string;
 	description: string;
 	prizePool?: string;
 	cardimage?: string;
 	numberOfDrivers?: number;
+	numberOfregistrations?: number;
 	classes?: string[];
 };
 
@@ -94,7 +96,9 @@ export type EventRegistration = {
 	firstName: string;
 	lastName: string;
 	carModelId: number;
+	carNumber: number;
 	category: string;
+	nationality?: number | string;
 };
 
 export async function registerForEvent(registration: EventRegistration) {
@@ -106,6 +110,17 @@ export async function registerForEvent(registration: EventRegistration) {
 	});
 
 	return readResponse(response);
+}
+
+export async function getEventRegistrations(eventId: string): Promise<{ users: any[]; takenCarNumbers: number[] }> {
+	const response = await fetch(`${getApiUrl()}/usereventregistration/${eventId}`);
+	const contentType = response.headers.get("content-type") || "";
+	if (!contentType.includes("application/json")) {
+		return { users: [], takenCarNumbers: [] };
+	}
+	const body = await response.text();
+	if (!response.ok) return { users: [], takenCarNumbers: [] };
+	return JSON.parse(body);
 }
 
 export async function uploadEventImage(file: File): Promise<string> {
@@ -148,4 +163,30 @@ export async function updateEvent(eventId: string, updates: Partial<EventForm>) 
 	});
 
 	return readResponse(response);
+}
+
+export type AccEntryList = {
+	entries: Array<{
+		raceNumber: number;
+		forcedCarModel: number;
+		overrideDriverInfo: number;
+		isServerAdmin: number;
+		drivers: Array<{
+			firstName: string;
+			lastName: string;
+			shortName: string;
+			driverCategory: number;
+			nationality: number;
+		}>;
+	}>;
+	forceEntryList: number;
+};
+
+export async function getAccEntryList(eventId: string): Promise<AccEntryList> {
+	const response = await fetch(`${getApiUrl()}/events/${eventId}/entrylist`);
+	const body = await response.text();
+	if (!response.ok) {
+		throw new Error("Failed to fetch ACC entrylist.json");
+	}
+	return JSON.parse(body) as AccEntryList;
 }
