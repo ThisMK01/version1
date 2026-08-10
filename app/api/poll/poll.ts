@@ -55,8 +55,12 @@ async function readResponse(response: Response) {
 }
 
 export async function getPolls(): Promise<PollItem[]> {
-	const response = await fetch(`${getApiUrl()}/polls`, {
-		headers: getAuthHeaders(),
+	const response = await fetch(`${getApiUrl()}/polls?t=${Date.now()}`, {
+		cache: "no-store",
+		headers: getAuthHeaders({
+			"Cache-Control": "no-cache, no-store, must-revalidate",
+			"Pragma": "no-cache",
+		}),
 		credentials: "include",
 	});
 	const data = await readResponse(response);

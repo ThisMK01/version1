@@ -64,8 +64,21 @@ export default function PollPage() {
 		}
 	};
 
+	const refreshPollsSilently = async () => {
+		try {
+			const data = await getPolls();
+			setPolls(data);
+		} catch {
+			// Silent background refresh error catch
+		}
+	};
+
 	useEffect(() => {
 		void loadAllPolls();
+		const interval = setInterval(() => {
+			void refreshPollsSilently();
+		}, 3000);
+		return () => clearInterval(interval);
 	}, []);
 
 	// Real-time WebSocket connection for live instant updates across all users!
@@ -79,22 +92,55 @@ export default function PollPage() {
 			console.log("⚡ Connected to live Poll WebSockets");
 		});
 
-		socket.on("poll_updated", (data: { pollId: string; poll?: PollItem; optionsRaw?: Array<{ track: string; voters: string[] }> }) => {
+		socket.on("poll_updated", (data: any) => {
+			if (!data || !data.pollId) return;
+
 			setPolls((prev) =>
 				prev.map((p) => {
 					if (p._id !== data.pollId) return p;
 
-					if (data.poll) {
-						// Determine user's voted track from raw options if present
-						let userVotedTrack = p.userVotedTrack;
-						if (user?.steamId && data.optionsRaw) {
-							const foundOpt = data.optionsRaw.find((o) => o.voters && o.voters.includes(user.steamId));
-							userVotedTrack = foundOpt ? foundOpt.track : null;
-						}
+					// If raw options are broadcast with voter arrays:
+					if (Array.isArray(data.options)) {
+						let totalVotes = 0;
+						let userVotedTrack: string | null = null;
+
+						const optionsWithCounts = data.options.map((opt: any) => {
+							const votersList = Array.isArray(opt.voters) ? opt.voters.map(String) : [];
+							const voteCount = votersList.length;
+							totalVotes += voteCount;
+
+							if (user?.steamId && votersList.includes(String(user.steamId))) {
+								userVotedTrack = opt.track;
+							}
+
+							return {
+								_id: String(opt._id),
+								track: String(opt.track),
+								voteCount,
+							};
+						});
+
+						const optionsWithPercent = optionsWithCounts.map((opt: { _id: string; track: string; voteCount: number }) => ({
+							...opt,
+							percentage: totalVotes > 0 ? Math.round((opt.voteCount / totalVotes) * 100) : 0,
+						}));
 
 						return {
+							...p,
+							title: data.title || p.title,
+							gameName: data.gameName || p.gameName,
+							status: data.status || p.status,
+							totalVotes,
+							userVotedTrack: userVotedTrack !== null ? userVotedTrack : p.userVotedTrack,
+							options: optionsWithPercent,
+						};
+					}
+
+					// Fallback if structured poll item is sent
+					if (data.poll) {
+						return {
 							...data.poll,
-							userVotedTrack,
+							userVotedTrack: p.userVotedTrack,
 						};
 					}
 
