@@ -13,6 +13,7 @@ import {
 	deletePoll,
 	type PollItem,
 } from "../../api/poll/poll";
+import { io } from "socket.io-client";
 import { FloatingInput, FloatingSelect } from "../event/components/EventFormControls";
 
 const gameLogos: Record<string, string> = {
@@ -21,6 +22,8 @@ const gameLogos: Record<string, string> = {
 	LMU: "/Game/tbm.png",
 	AC: "/Game/ac.jpg",
 };
+
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
 
 export default function PollPage() {
 	const { user, adminMode } = useAuth();
@@ -64,6 +67,58 @@ export default function PollPage() {
 	useEffect(() => {
 		void loadAllPolls();
 	}, []);
+
+	// Real-time WebSocket connection for live instant updates across all users!
+	useEffect(() => {
+		const socket = io(API_BASE_URL, {
+			transports: ["websocket", "polling"],
+			withCredentials: true,
+		});
+
+		socket.on("connect", () => {
+			console.log("⚡ Connected to live Poll WebSockets");
+		});
+
+		socket.on("poll_updated", (data: { pollId: string; poll?: PollItem; optionsRaw?: Array<{ track: string; voters: string[] }> }) => {
+			setPolls((prev) =>
+				prev.map((p) => {
+					if (p._id !== data.pollId) return p;
+
+					if (data.poll) {
+						// Determine user's voted track from raw options if present
+						let userVotedTrack = p.userVotedTrack;
+						if (user?.steamId && data.optionsRaw) {
+							const foundOpt = data.optionsRaw.find((o) => o.voters && o.voters.includes(user.steamId));
+							userVotedTrack = foundOpt ? foundOpt.track : null;
+						}
+
+						return {
+							...data.poll,
+							userVotedTrack,
+						};
+					}
+
+					return p;
+				})
+			);
+		});
+
+		socket.on("poll_created", (data: { poll: PollItem }) => {
+			if (data.poll) {
+				setPolls((prev) => [data.poll, ...prev.filter((p) => p._id !== data.poll._id)]);
+			}
+		});
+
+		socket.on("poll_deleted", (data: { pollId: string }) => {
+			if (data.pollId) {
+				setPolls((prev) => prev.filter((p) => p._id !== data.pollId));
+			}
+		});
+
+		return () => {
+			socket.disconnect();
+		};
+	}, [user?.steamId]);
 
 	// Toast auto-clear
 	useEffect(() => {
