@@ -27,6 +27,10 @@ export const apiClient = {
     async me() {
       return apiFetch("/auth/me");
     },
+
+    async logout() {
+      return apiFetch("/auth/logout", { method: "POST" });
+    },
   },
 
   events: {

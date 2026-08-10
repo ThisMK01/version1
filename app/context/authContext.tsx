@@ -20,7 +20,7 @@ type AuthContextType = {
   loading: boolean;
   adminMode: boolean;
   setAdminMode: (enabled: boolean) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,9 +83,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchCurrentUser();
   }, []);
 
-  const logout = () => {
-    setUser(null);
-    setAdminMode(false);
+  const logout = async () => {
+    try {
+      if (API_URL) {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to call logout API:", error);
+    } finally {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("asrt_admin_mode");
+      }
+      setUser(null);
+      setAdminModeState(false);
+    }
   };
 
   return (

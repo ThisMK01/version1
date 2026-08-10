@@ -13,8 +13,8 @@ export default function ProfilePage() {
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 
