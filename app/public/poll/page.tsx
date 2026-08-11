@@ -42,6 +42,195 @@ interface RawPollSocketUpdate {
 	poll?: PollItem;
 }
 
+// ─── Countdown Hook ────────────────────────────────────────────────────────
+function useCountdown(expiresAt?: string | null) {
+	const calcRemaining = () => {
+		if (!expiresAt) return null;
+		const diff = new Date(expiresAt).getTime() - Date.now();
+		if (diff <= 0) return null;
+		const d = Math.floor(diff / 86400000);
+		const h = Math.floor((diff % 86400000) / 3600000);
+		const m = Math.floor((diff % 3600000) / 60000);
+		const s = Math.floor((diff % 60000) / 1000);
+		return { d, h, m, s, totalMs: diff };
+	};
+	const [remaining, setRemaining] = useState(calcRemaining);
+	useEffect(() => {
+		if (!expiresAt) return;
+		const id = setInterval(() => setRemaining(calcRemaining()), 1000);
+		return () => clearInterval(id);
+	}, [expiresAt]);
+	return remaining;
+}
+
+// ─── PollCard Component ────────────────────────────────────────────────────
+interface PollCardProps {
+	poll: PollItem;
+	isClosed: boolean;
+	leadingOption: PollOption | null;
+	canManagePolls: boolean;
+	votingPollId: string | null;
+	onSelect: () => void;
+	onToggleStatus: () => void;
+	onDelete: () => void;
+}
+
+function PollCard({ poll, isClosed, leadingOption, canManagePolls, onSelect, onToggleStatus, onDelete }: PollCardProps) {
+	const countdown = useCountdown(!isClosed ? poll.expiresAt : null);
+	const isUrgent = countdown ? countdown.totalMs < 3600000 : false;
+
+	return (
+		<Card
+			className={`group bg-[#0e1628] rounded-2xl border transition-all duration-300 p-5 shadow-2xl flex flex-col justify-between overflow-hidden cursor-pointer ${
+				isClosed
+					? "border-white/10 opacity-95 hover:border-amber-400/40"
+					: "border-white/10 hover:border-cyan-400/60 hover:shadow-[0_0_25px_rgba(0,217,255,0.2)]"
+			}`}
+			onClick={onSelect}
+		>
+			{/* Poll Card Top */}
+			<div>
+				<div className="flex items-start justify-between gap-3">
+					<div className="flex items-center gap-3">
+						<img
+							src={gameLogos[poll.gameName] || "/Game/acc.png"}
+							alt={poll.gameName}
+							className="w-10 h-10 object-contain rounded-lg bg-black/40 p-1 border border-white/10 shrink-0"
+						/>
+						<div>
+							<span className="font-mono-data text-[10px] font-bold text-cyan-400 uppercase tracking-widest block">
+								{poll.gameName} POLL
+							</span>
+							<h3 className="font-sora text-base font-bold text-white leading-snug line-clamp-1 group-hover:text-cyan-300 transition-colors">
+								{poll.title}
+							</h3>
+						</div>
+					</div>
+
+					{/* Status Badge */}
+					{isClosed ? (
+						<span className="rounded-full bg-zinc-800 border border-zinc-600 text-zinc-300 px-2.5 py-0.5 font-mono-data text-[10px] font-bold flex items-center gap-1 shrink-0">
+							<Lock className="w-3 h-3" />
+							<span>CLOSED</span>
+						</span>
+					) : (
+						<span className="rounded-full bg-red-600/90 border border-red-400/70 text-white px-2.5 py-0.5 font-mono-data text-[10px] font-bold animate-pulse flex items-center gap-1 shadow-md shrink-0">
+							<span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
+							<span>LIVE VOTING</span>
+						</span>
+					)}
+				</div>
+
+				{/* ── Countdown Timer ── */}
+				{!isClosed && countdown && (
+					<div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 ${
+						isUrgent
+							? "bg-red-950/40 border-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.2)]"
+							: "bg-[#0a1020]/60 border-white/10"
+					}`}>
+						<Clock className={`w-3.5 h-3.5 shrink-0 ${isUrgent ? "text-red-400 animate-pulse" : "text-cyan-400"}`} />
+						<span className={`font-mono-data text-[10px] font-bold uppercase tracking-wider ${isUrgent ? "text-red-400" : "text-zinc-400"}`}>
+							{isUrgent ? "CLOSING SOON" : "CLOSES IN"}
+						</span>
+						<div className="ml-auto flex items-center gap-1.5 font-mono-data text-xs font-black tabular-nums">
+							{countdown.d > 0 && (
+								<>
+									<span className={`${isUrgent ? "text-red-300" : "text-white"}`}>{countdown.d}</span>
+									<span className="text-zinc-500 text-[10px]">d</span>
+								</>
+							)}
+							<span className={`${isUrgent ? "text-red-300" : "text-white"}`}>{String(countdown.h).padStart(2, "0")}</span>
+							<span className="text-zinc-500 text-[10px]">h</span>
+							<span className={`${isUrgent ? "text-red-300" : "text-white"}`}>{String(countdown.m).padStart(2, "0")}</span>
+							<span className="text-zinc-500 text-[10px]">m</span>
+							<span className={`${isUrgent ? "text-red-400 animate-pulse" : "text-cyan-400"}`}>{String(countdown.s).padStart(2, "0")}</span>
+							<span className="text-zinc-500 text-[10px]">s</span>
+						</div>
+					</div>
+				)}
+
+				{/* P1 Leader Track Banner */}
+				<div className={`mt-3 rounded-xl border p-3 transition-all ${
+					isClosed
+						? "bg-amber-950/20 border-amber-500/30"
+						: "bg-cyan-950/20 border-cyan-500/30"
+				}`}>
+					<div className="flex items-center justify-between">
+						<span className={`font-mono-data text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+							isClosed ? "text-amber-400" : "text-cyan-400"
+						}`}>
+							{isClosed ? (
+								<><Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" /><span>FINISHED P1</span></>
+							) : (
+								<><Flag className="w-3.5 h-3.5 text-cyan-400 shrink-0" /><span>CURRENTLY AT P1</span></>
+							)}
+						</span>
+						{leadingOption && (
+							<span className={`font-mono-data text-[11px] font-bold ${isClosed ? "text-amber-300" : "text-cyan-300"}`}>
+								{leadingOption.percentage}% ({leadingOption.voteCount} {leadingOption.voteCount === 1 ? "vote" : "votes"})
+							</span>
+						)}
+					</div>
+					<div className="mt-1">
+						<span className={`font-sora text-sm font-extrabold truncate ${isClosed ? "text-amber-300" : "text-white"}`}>
+							{leadingOption && leadingOption.voteCount > 0 ? leadingOption.track : "No votes recorded yet"}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			{/* Card Footer */}
+			<div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+				<div>
+					<span className="font-mono-data text-xs text-zinc-400 font-semibold block">
+						📊 {poll.totalVotes} Total {poll.totalVotes === 1 ? "Vote" : "Votes"}
+					</span>
+					{poll.userVotedTrack && (
+						<span className="text-[10px] font-mono-data text-emerald-400 font-semibold block">
+							✓ You voted: {poll.userVotedTrack}
+						</span>
+					)}
+				</div>
+
+				<div className="flex items-center gap-2">
+					{canManagePolls && (
+						<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+							<Button
+								size="sm"
+								variant="outline"
+								onPress={onToggleStatus}
+								className={`font-mono-data text-[10px] px-2 py-0.5 rounded-full border ${
+									isClosed
+										? "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+										: "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+								}`}
+							>
+								{isClosed ? "REOPEN" : "CLOSE"}
+							</Button>
+							<button
+								type="button"
+								onClick={onDelete}
+								className="p-1 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+								title="Delete Poll"
+							>
+								<Trash2 className="w-3.5 h-3.5" />
+							</button>
+						</div>
+					)}
+					<Button
+						size="sm"
+						onPress={onSelect}
+						className="bg-cyan-400 text-slate-950 font-sora font-bold text-xs px-3.5 py-1.5 rounded-full glow-hover flex items-center gap-1 shrink-0"
+					>
+						<span>{isClosed ? "RESULTS" : "VOTE NOW"}</span>
+						<ChevronRight className="w-3.5 h-3.5" />
+					</Button>
+				</div>
+			</div>
+		</Card>
+	);
+}
+
 export default function PollPage() {
 	const { user, adminMode } = useAuth();
 	const canManagePolls = adminMode;
@@ -491,138 +680,19 @@ export default function PollPage() {
 								: null;
 
 							return (
-								<Card
+								<PollCard
 									key={poll._id}
-									className={`group bg-[#0e1628] rounded-2xl border transition-all duration-300 p-5 shadow-2xl flex flex-col justify-between overflow-hidden cursor-pointer ${
-										isClosed
-											? "border-white/10 opacity-95 hover:border-amber-400/40"
-											: "border-white/10 hover:border-cyan-400/60 hover:shadow-[0_0_25px_rgba(0,217,255,0.2)]"
-									}`}
-									onClick={() => setSelectedPollId(poll._id)}
-								>
-									{/* Poll Card Top */}
-									<div>
-										<div className="flex items-start justify-between gap-3">
-											<div className="flex items-center gap-3">
-												<img
-													src={gameLogos[poll.gameName] || "/Game/acc.png"}
-													alt={poll.gameName}
-													className="w-10 h-10 object-contain rounded-lg bg-black/40 p-1 border border-white/10 shrink-0"
-												/>
-												<div>
-													<span className="font-mono-data text-[10px] font-bold text-cyan-400 uppercase tracking-widest block">
-														{poll.gameName} POLL
-													</span>
-													<h3 className="font-sora text-base font-bold text-white leading-snug line-clamp-1 group-hover:text-cyan-300 transition-colors">
-														{poll.title}
-													</h3>
-												</div>
-											</div>
+									poll={poll}
+									isClosed={isClosed}
+									leadingOption={leadingOption}
+									canManagePolls={canManagePolls}
+									votingPollId={votingPollId}
+									onSelect={() => setSelectedPollId(poll._id)}
+									onToggleStatus={() => handleToggleStatus(poll._id)}
+									onDelete={() => handleDeletePoll(poll._id)}
+								/>
 
-											{/* Status Badge */}
-											{isClosed ? (
-												<span className="rounded-full bg-zinc-800 border border-zinc-600 text-zinc-300 px-2.5 py-0.5 font-mono-data text-[10px] font-bold flex items-center gap-1 shrink-0">
-													<Lock className="w-3 h-3" />
-													<span>CLOSED</span>
-												</span>
-											) : (
-												<span className="rounded-full bg-red-600/90 border border-red-400/70 text-white px-2.5 py-0.5 font-mono-data text-[10px] font-bold animate-pulse flex items-center gap-1 shadow-md shrink-0">
-													<span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
-													<span>LIVE VOTING</span>
-												</span>
-											)}
-										</div>
-
-										{/* P1 Leader Track Banner */}
-										<div className={`mt-4 rounded-xl border p-3 transition-all ${
-											isClosed
-												? "bg-amber-950/20 border-amber-500/30"
-												: "bg-cyan-950/20 border-cyan-500/30"
-										}`}>
-											<div className="flex items-center justify-between">
-												<span className={`font-mono-data text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-													isClosed ? "text-amber-400" : "text-cyan-400"
-												}`}>
-													{isClosed ? (
-														<>
-															<Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-															<span>FINISHED P1</span>
-														</>
-													) : (
-														<>
-															<Flag className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-															<span>CURRENTLY AT P1</span>
-														</>
-													)}
-												</span>
-
-												{leadingOption && (
-													<span className={`font-mono-data text-[11px] font-bold ${isClosed ? "text-amber-300" : "text-cyan-300"}`}>
-														{leadingOption.percentage}% ({leadingOption.voteCount} {leadingOption.voteCount === 1 ? "vote" : "votes"})
-													</span>
-												)}
-											</div>
-
-											<div className="mt-1 flex items-center justify-between">
-												<span className={`font-sora text-sm font-extrabold truncate ${isClosed ? "text-amber-300 text-shadow" : "text-white"}`}>
-													{leadingOption && leadingOption.voteCount > 0 ? leadingOption.track : "No votes recorded yet"}
-												</span>
-											</div>
-										</div>
-									</div>
-
-									{/* Card Footer */}
-									<div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
-										<div>
-											<span className="font-mono-data text-xs text-zinc-400 font-semibold block">
-												📊 {poll.totalVotes} Total {poll.totalVotes === 1 ? "Vote" : "Votes"}
-											</span>
-											{poll.userVotedTrack && (
-												<span className="text-[10px] font-mono-data text-emerald-400 font-semibold block">
-													✓ You voted: {poll.userVotedTrack}
-												</span>
-											)}
-										</div>
-
-										<div className="flex items-center gap-2">
-											{canManagePolls && (
-												<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-													<Button
-														size="sm"
-														variant="outline"
-														onPress={() => handleToggleStatus(poll._id)}
-														className={`font-mono-data text-[10px] px-2 py-0.5 rounded-full border ${
-															isClosed
-																? "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
-																: "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
-														}`}
-													>
-														{isClosed ? "REOPEN" : "CLOSE"}
-													</Button>
-
-													<button
-														type="button"
-														onClick={() => handleDeletePoll(poll._id)}
-														className="p-1 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-														title="Delete Poll"
-													>
-														<Trash2 className="w-3.5 h-3.5" />
-													</button>
-												</div>
-											)}
-
-											<Button
-												size="sm"
-												onPress={() => setSelectedPollId(poll._id)}
-												className="bg-cyan-400 text-slate-950 font-sora font-bold text-xs px-3.5 py-1.5 rounded-full glow-hover flex items-center gap-1 shrink-0"
-											>
-												<span>{isClosed ? "RESULTS" : "VOTE NOW"}</span>
-												<ChevronRight className="w-3.5 h-3.5" />
-											</Button>
-										</div>
-									</div>
-								</Card>
-							);
+						);
 						})}
 					</div>
 				)}

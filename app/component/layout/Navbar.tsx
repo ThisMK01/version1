@@ -82,21 +82,23 @@ export default function Navbar() {
             </Button>
           )}
 
-          {/* Discord Button (Vibrant Purple) */}
-          <Button
-            size="sm"
-            onPress={apiClient.auth.discordConnect}
-            className="bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-xs px-4 rounded-full shadow-[0_0_15px_rgba(88,101,242,0.4)] hover:shadow-[0_0_20px_rgba(88,101,242,0.6)] transition-all flex items-center gap-2"
-          >
-            <Image
-              src="/discord.png"
-              alt="Discord"
-              width={16}
-              height={16}
-              className="rounded-full"
-            />
-            <span>JOIN DISCORD</span>
-          </Button>
+          {/* Discord Button — hidden once Discord is linked */}
+          {!user?.discordId && (
+            <Button
+              size="sm"
+              onPress={apiClient.auth.discordConnect}
+              className="bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-xs px-4 rounded-full shadow-[0_0_15px_rgba(88,101,242,0.4)] hover:shadow-[0_0_20px_rgba(88,101,242,0.6)] transition-all flex items-center gap-2"
+            >
+              <Image
+                src="/discord.png"
+                alt="Discord"
+                width={16}
+                height={16}
+                className="rounded-full"
+              />
+              <span>JOIN DISCORD</span>
+            </Button>
+          )}
 
           {/* Admin / User Mode Button */}
           {isDevOrAdmin && (
@@ -224,22 +226,25 @@ export default function Navbar() {
               </Link>
             )}
 
-            <Button
-              onPress={() => {
-                setMobileOpen(false);
-                apiClient.auth.discordConnect();
-              }}
-              className="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-xs py-2 rounded-full shadow-[0_0_15px_rgba(88,101,242,0.4)] flex items-center justify-center gap-2"
-            >
-              <Image
-                src="/discord.png"
-                alt="Discord"
-                width={16}
-                height={16}
-                className="rounded-full"
-              />
-              <span>JOIN DISCORD</span>
-            </Button>
+            {/* Mobile Discord Button — hidden once Discord is linked */}
+            {!user?.discordId && (
+              <Button
+                onPress={() => {
+                  setMobileOpen(false);
+                  apiClient.auth.discordConnect();
+                }}
+                className="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-xs py-2 rounded-full shadow-[0_0_15px_rgba(88,101,242,0.4)] flex items-center justify-center gap-2"
+              >
+                <Image
+                  src="/discord.png"
+                  alt="Discord"
+                  width={16}
+                  height={16}
+                  className="rounded-full"
+                />
+                <span>JOIN DISCORD</span>
+              </Button>
+            )}
           </div>
         </div>
       )}
