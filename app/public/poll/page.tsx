@@ -498,7 +498,7 @@ export default function PollPage() {
 											? "border-white/10 opacity-95 hover:border-amber-400/40"
 											: "border-white/10 hover:border-cyan-400/60 hover:shadow-[0_0_25px_rgba(0,217,255,0.2)]"
 									}`}
-									onClick={() => setSelectedPollModal(poll)}
+									onClick={() => setSelectedPollId(poll._id)}
 								>
 									{/* Poll Card Top */}
 									<div>
@@ -613,7 +613,7 @@ export default function PollPage() {
 
 											<Button
 												size="sm"
-												onPress={() => setSelectedPollModal(poll)}
+												onPress={() => setSelectedPollId(poll._id)}
 												className="bg-cyan-400 text-slate-950 font-sora font-bold text-xs px-3.5 py-1.5 rounded-full glow-hover flex items-center gap-1 shrink-0"
 											>
 												<span>{isClosed ? "RESULTS" : "VOTE NOW"}</span>
@@ -855,7 +855,7 @@ export default function PollPage() {
 
 									<button
 										type="button"
-										onClick={() => setSelectedPollModal(null)}
+										onClick={() => setSelectedPollId(null)}
 										className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white shrink-0"
 									>
 										<X className="w-5 h-5" />
@@ -1028,7 +1028,7 @@ export default function PollPage() {
 												<button
 													type="button"
 													onClick={() => {
-														setSelectedPollModal(null);
+														setSelectedPollId(null);
 														handleDeletePoll(poll._id);
 													}}
 													className="p-2 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -1042,7 +1042,7 @@ export default function PollPage() {
 
 									<Button
 										variant="outline"
-										onPress={() => setSelectedPollModal(null)}
+										onPress={() => setSelectedPollId(null)}
 										className="border-white/20 text-zinc-300 font-mono-data text-xs py-2 px-6 rounded-full hover:bg-white/10"
 									>
 										CLOSE
