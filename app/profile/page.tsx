@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Mail, LogOut, ShieldCheck, UserRound, Check } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback, Button, Card, CardContent, Chip, Input } from "@heroui/react";
 import { useAuth } from "../context/authContext";
+import { apiClient } from "@/lib/api.client";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -97,7 +99,7 @@ export default function ProfilePage() {
                 <h2 className="font-sora text-3xl font-bold text-white truncate">
                   {user.username}
                 </h2>
-                <div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Chip
                     size="sm"
                     variant="soft"
@@ -106,8 +108,54 @@ export default function ProfilePage() {
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>{user.role === "admin" ? "ADMINISTRATOR" : "VERIFIED DRIVER"}</span>
                   </Chip>
+
+                  {user.discordUsername ? (
+                    <Chip
+                      size="sm"
+                      variant="soft"
+                      className="bg-[#5865F2]/10 border border-[#5865F2]/40 text-[#5865F2] font-mono-data text-xs flex items-center gap-1.5"
+                    >
+                      <span>DISCORD: @{user.discordUsername}</span>
+                    </Chip>
+                  ) : null}
                 </div>
               </div>
+            </div>
+
+            {/* Connected Discord Section */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 bg-[#0a1020] p-6 rounded-xl border border-white/5">
+              <div className="flex items-start gap-4 flex-1">
+                <div className="p-3 bg-[#5865F2]/10 text-[#5865F2] rounded-lg">
+                  <Image
+                    src="/discord.png"
+                    alt="Discord"
+                    width={20}
+                    height={20}
+                    className="rounded-full"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-sora text-sm font-bold text-white">Discord Integration</p>
+                  {user.discordUsername ? (
+                    <p className="font-mono-data text-xs text-emerald-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Connected as @{user.discordUsername}</span>
+                    </p>
+                  ) : (
+                    <p className="font-mono-data text-xs text-zinc-400">
+                      No Discord account linked. Connect to receive race notifications and stewarding pings.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                onPress={() => apiClient.auth.discordConnect()}
+                className="bg-[#5865F2] hover:bg-[#4752C4] text-white font-sora font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-[0_0_15px_rgba(88,101,242,0.4)]"
+              >
+                <span>{user.discordUsername ? "RECONNECT DISCORD" : "CONNECT DISCORD"}</span>
+              </Button>
             </div>
 
             {/* Email Section */}

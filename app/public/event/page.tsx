@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { CalendarDays, Gamepad2, Pencil, Plus, UserPlus, X, Flag, Trophy, ShieldCheck, Car, ChevronRight, Info, Eye, FileText, FileUp, Download, FileJson, Search, Filter, AlertCircle } from "lucide-react";
 import { Button, Card, CardContent, Chip, ListBox, TextArea } from "@heroui/react";
 import { useAuth } from "../../context/authContext";
+import { apiClient } from "@/lib/api.client";
 import { createEvent, getCarClasses, getCars, getEvents, getAccEntryList, getEventRegistrations, registerForEvent, updateEvent, uploadEventImage, type Car as CarType, type CarClass, type EventForm, type EventItem } from "../../api/event/event";
 import { getNationalitiesForGame } from "../../data/nationalities";
 import acctracks from "../../tracks/tracks";
@@ -360,6 +361,11 @@ export default function EventPage() {
   };
 
   const openRegistration = async (event: EventItem) => {
+    if (!user) {
+      setToast({ message: "🔒 Please log in with Steam to register for race events.", type: "error" });
+      return;
+    }
+
     const regCount = event.numberOfregistrations ?? 0;
     const maxDrivers = event.numberOfDrivers ?? 0;
     if (maxDrivers > 0 && regCount >= maxDrivers) {
@@ -367,9 +373,10 @@ export default function EventPage() {
       return;
     }
 
-    const checkEnd = event.endDate || event.startDate;
-    if (new Date(checkEnd).getTime() < Date.now()) {
-      setToast({ message: "Registration is closed because this event has already ended.", type: "error" });
+    const eventStart = event.startDate || (event as any).date || "";
+    const msUntilStart = eventStart ? new Date(eventStart).getTime() - Date.now() : 0;
+    if (new Date(event.endDate || eventStart).getTime() < Date.now() || msUntilStart <= 60 * 60 * 1000) {
+      setToast({ message: "Registration is closed because this race starts in less than 1 hour.", type: "error" });
       return;
     }
 
@@ -387,6 +394,11 @@ export default function EventPage() {
 
   const submitRegistration = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user) {
+      setToast({ message: "🔒 Please log in with Steam to register for race events.", type: "error" });
+      return;
+    }
+
     if (!registrationEvent || !registration.className || !registration.car || !registration.nationality || !registration.carNumber) {
       setToast({ message: "Please fill out all required fields including Car Number and Nationality.", type: "error" });
       return;
@@ -602,17 +614,16 @@ export default function EventPage() {
 
                 {/* Discord Stream Action Button */}
                 <div className="pt-2">
-                  <a
-                    href="https://discord.gg/simsports"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-3 rounded-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-sora font-extrabold text-xs sm:text-sm py-3.5 px-7 shadow-[0_0_25px_rgba(88,101,242,0.5)] transition-all duration-300 transform hover:scale-[1.02] w-full sm:w-auto text-center"
+                  <button
+                    type="button"
+                    onClick={() => apiClient.auth.discordConnect()}
+                    className="inline-flex items-center justify-center gap-3 rounded-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-sora font-extrabold text-xs sm:text-sm py-3.5 px-7 shadow-[0_0_25px_rgba(88,101,242,0.5)] transition-all duration-300 transform hover:scale-[1.02] w-full sm:w-auto text-center cursor-pointer"
                   >
                     <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 127.14 96.36">
                       <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a73.57,73.57,0,0,0,64.32,0c.87.68,1.76,1.36,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-18.91-72.13ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5.08-12.74,11.44-12.74S96.23,45.91,96.1,53,91,65.69,84.69,65.69Z" />
                     </svg>
                     <span>JOIN DISCORD TO WATCH THE RACE</span>
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
@@ -687,6 +698,8 @@ export default function EventPage() {
               const eventStartDate = event.startDate || (event as any).date || "";
               const checkEndDate = event.endDate || eventStartDate;
               const isPast = new Date(checkEndDate).getTime() < Date.now();
+              const msUntilStart = eventStartDate ? new Date(eventStartDate).getTime() - Date.now() : Infinity;
+              const isRegistrationClosed = isPast || (msUntilStart <= 60 * 60 * 1000);
               const isLive = new Date(eventStartDate).getTime() <= Date.now() && !isPast;
               const fillPercent = maxDrivers > 0 ? Math.min(100, Math.round((regCount / maxDrivers) * 100)) : 0;
 
@@ -721,6 +734,10 @@ export default function EventPage() {
                     {isPast ? (
                       <div className="absolute right-3 top-3 rounded-full bg-red-950/90 border border-red-500/50 text-red-400 px-2.5 py-0.5 font-mono-data text-[10px] font-bold z-10 shadow-lg">
                         SESSION ENDED
+                      </div>
+                    ) : isRegistrationClosed ? (
+                      <div className="absolute right-3 top-3 rounded-full bg-amber-950/90 border border-amber-500/50 text-amber-400 px-2.5 py-0.5 font-mono-data text-[10px] font-bold z-10 shadow-lg">
+                        CLOSED (&lt;1h)
                       </div>
                     ) : isLive ? (
                       <div className="absolute right-3 top-3 rounded-full bg-red-600/90 border border-red-400/70 text-white px-2.5 py-0.5 font-mono-data text-[10px] font-bold z-10 shadow-lg animate-pulse flex items-center gap-1">
@@ -842,6 +859,15 @@ export default function EventPage() {
                               className="rounded-full border border-red-500/30 bg-red-500/10 text-red-400 font-mono-data text-xs px-3.5 py-1.5 font-bold cursor-not-allowed"
                             >
                               <span>ENDED</span>
+                            </Button>
+                          ) : isRegistrationClosed ? (
+                            <Button
+                              size="sm"
+                              isDisabled
+                              variant="outline"
+                              className="rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 font-mono-data text-xs px-3.5 py-1.5 font-bold cursor-not-allowed"
+                            >
+                              <span>CLOSED</span>
                             </Button>
                           ) : isFull ? (
                             <Button

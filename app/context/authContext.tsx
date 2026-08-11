@@ -13,6 +13,9 @@ type User = {
   username: string;
   avatar: string;
   role: "user" | "admin";
+  discordId?: string | null;
+  discordUsername?: string | null;
+  discordAvatar?: string | null;
 };
 
 type AuthContextType = {

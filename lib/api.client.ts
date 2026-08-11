@@ -24,6 +24,15 @@ export const apiClient = {
       window.location.href = "/api/auth/steam";
     },
 
+    discordConnect() {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const targetUrl = token
+        ? `${apiUrl}/auth/discord/connect?token=${encodeURIComponent(token)}`
+        : `${apiUrl}/auth/discord/connect`;
+      window.location.href = targetUrl;
+    },
+
     async me() {
       return apiFetch("/auth/me");
     },

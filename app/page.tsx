@@ -5,8 +5,10 @@ import Image from "next/image";
 import { Button, Card, CardContent } from "@heroui/react";
 import { ArrowRight, Flag, ShieldCheck, Trophy, ChevronRight, Zap, Users, BarChart3 } from "lucide-react";
 import { apiClient } from "@/lib/api.client";
+import { useAuth } from "./context/authContext";
 
 export default function HomePage() {
+  const { user } = useAuth();
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0e131f] text-[#dee2f3]">
       
@@ -71,25 +73,20 @@ export default function HomePage() {
               </Link>
 
               {/* JOIN DISCORD Button (Vibrant Purple) */}
-              <Link
-                href="https://discord.gg/cCSnjPXkK"
-                target="_blank"
-                rel="noreferrer"
+              <Button
+                size="lg"
+                onPress={apiClient.auth.discordConnect}
+                className="w-full sm:w-auto bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-sm px-8 py-6 rounded-full flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(88,101,242,0.5)] hover:shadow-[0_0_25px_rgba(88,101,242,0.7)] transition-all"
               >
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-sm px-8 py-6 rounded-full flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(88,101,242,0.5)] hover:shadow-[0_0_25px_rgba(88,101,242,0.7)] transition-all"
-                >
-                  <Image
-                    src="/discord.png"
-                    alt="Discord"
-                    width={20}
-                    height={20}
-                    className="rounded-full"
-                  />
-                  <span>JOIN DISCORD</span>
-                </Button>
-              </Link>
+                <Image
+                  src="/discord.png"
+                  alt="Discord"
+                  width={20}
+                  height={20}
+                  className="rounded-full"
+                />
+                <span>JOIN DISCORD</span>
+              </Button>
 
             </div>
 
@@ -151,18 +148,32 @@ export default function HomePage() {
                 Verified Steam Driver ID
               </h3>
               <p className="font-inter text-zinc-300 text-xs leading-relaxed">
-                Connect your Steam profile to manage driver identity, claim car numbers, and verify grid entry credentials.
+                {user
+                  ? `Connected as ${user.username}. Manage driver identity, claim car numbers, and verify grid entry credentials.`
+                  : "Connect your Steam profile to manage driver identity, claim car numbers, and verify grid entry credentials."}
               </p>
             </div>
 
-            <Button
-              onPress={apiClient.auth.steamLogin}
-              variant="ghost"
-              className="text-purple-400 hover:text-purple-300 font-mono-data text-xs p-0 flex items-center gap-1 justify-start"
-            >
-              <span>STEAM LOGIN</span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            {user ? (
+              <Link href="/profile">
+                <Button
+                  variant="ghost"
+                  className="text-purple-400 hover:text-purple-300 font-mono-data text-xs p-0 flex items-center gap-1 justify-start"
+                >
+                  <span>VIEW DRIVER PROFILE</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                onPress={apiClient.auth.steamLogin}
+                variant="ghost"
+                className="text-purple-400 hover:text-purple-300 font-mono-data text-xs p-0 flex items-center gap-1 justify-start"
+              >
+                <span>STEAM LOGIN</span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            )}
           </Card>
 
           {/* Feature 3 */}
@@ -214,25 +225,20 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4 relative z-10 pt-2">
-            <Link
-              href="https://discord.gg/cCSnjPXkK"
-              target="_blank"
-              rel="noreferrer"
+            <Button
+              size="lg"
+              onPress={apiClient.auth.discordConnect}
+              className="w-full sm:w-auto bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-sm px-8 py-6 rounded-full shadow-[0_0_20px_rgba(88,101,242,0.5)] flex items-center justify-center gap-2"
             >
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-sm px-8 py-6 rounded-full shadow-[0_0_20px_rgba(88,101,242,0.5)] flex items-center justify-center gap-2"
-              >
-                <Image
-                  src="/discord.png"
-                  alt="Discord"
-                  width={20}
-                  height={20}
-                  className="rounded-full"
-                />
-                <span>JOIN DISCORD COMMUNITY</span>
-              </Button>
-            </Link>
+              <Image
+                src="/discord.png"
+                alt="Discord"
+                width={20}
+                height={20}
+                className="rounded-full"
+              />
+              <span>JOIN DISCORD COMMUNITY</span>
+            </Button>
 
             <Link href="/public/event">
               <Button

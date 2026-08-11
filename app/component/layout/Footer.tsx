@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@heroui/react";
+import { apiClient } from "@/lib/api.client";
 
 export default function Footer() {
   return (
@@ -36,14 +37,10 @@ export default function Footer() {
           <p className="text-xs text-zinc-400 font-inter leading-relaxed">
             Connect with league organizers, drivers, and race stewards on our Discord server.
           </p>
-          <Link
-            href="https://discord.gg/cCSnjPXkK"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-block pt-1"
-          >
+          <div className="pt-1">
             <Button
               size="sm"
+              onPress={apiClient.auth.discordConnect}
               className="bg-[#5865F2] hover:bg-[#4752C4] text-white font-mono-data font-bold text-xs px-5 py-2.5 rounded-full shadow-[0_0_15px_rgba(88,101,242,0.4)] flex items-center gap-2"
             >
               <Image
@@ -55,7 +52,7 @@ export default function Footer() {
               />
               <span>JOIN DISCORD COMMUNITY</span>
             </Button>
-          </Link>
+          </div>
         </div>
 
       </div>

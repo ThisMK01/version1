@@ -5,6 +5,7 @@ import { Plus, Flag, Trophy, ShieldAlert, CheckCircle2, Lock, Trash2, Clock, Vot
 import { Button, Card, Chip, ListBox } from "@heroui/react";
 import { useAuth } from "../../context/authContext";
 import acctracks from "../../tracks/tracks";
+import lmuTracks from "../../tracks/lmutracks";
 import {
 	getPolls,
 	createPoll,
@@ -12,6 +13,7 @@ import {
 	togglePollStatus,
 	deletePoll,
 	type PollItem,
+	type PollOption,
 } from "../../api/poll/poll";
 import { io } from "socket.io-client";
 import { FloatingInput, FloatingSelect } from "../event/components/EventFormControls";
@@ -24,6 +26,21 @@ const gameLogos: Record<string, string> = {
 };
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+
+interface RawSocketOption {
+	_id: string;
+	track: string;
+	voters?: Array<string | number>;
+}
+
+interface RawPollSocketUpdate {
+	pollId?: string;
+	title?: string;
+	gameName?: string;
+	status?: "active" | "closed";
+	options?: RawSocketOption[];
+	poll?: PollItem;
+}
 
 export default function PollPage() {
 	const { user, adminMode } = useAuth();
@@ -40,6 +57,10 @@ export default function PollPage() {
 
 	// Voting & action states
 	const [votingPollId, setVotingPollId] = useState<string | null>(null);
+	const [selectedPollId, setSelectedPollId] = useState<string | null>(null);
+
+	// Derive open modal poll object directly from polls state
+	const selectedPollModal = polls.find((p) => p._id === selectedPollId) || null;
 
 	// Create Poll Modal State
 	const [showCreateModal, setShowCreateModal] = useState(false);
@@ -49,6 +70,19 @@ export default function PollPage() {
 	const [expiryDate, setExpiryDate] = useState("");
 	const [expiryTime, setExpiryTime] = useState("20:00");
 	const [creating, setCreating] = useState(false);
+
+	// Lock body scroll whenever any modal is open
+	useEffect(() => {
+		const anyModalOpen = showCreateModal || !!selectedPollId;
+		if (anyModalOpen) {
+			document.body.style.overflow = "hidden";
+		} else {
+			document.body.style.overflow = "";
+		}
+		return () => {
+			document.body.style.overflow = "";
+		};
+	}, [showCreateModal, selectedPollId]);
 
 	const loadAllPolls = async () => {
 		try {
@@ -74,11 +108,37 @@ export default function PollPage() {
 	};
 
 	useEffect(() => {
-		void loadAllPolls();
+		let isMounted = true;
+
+		const fetchInitialPolls = async () => {
+			try {
+				const data = await getPolls();
+				if (isMounted) {
+					setPolls(data);
+					setError("");
+				}
+			} catch (err) {
+				if (isMounted) {
+					console.error("Failed to load polls:", err);
+					setError(err instanceof Error ? err.message : "Failed to load polls.");
+				}
+			} finally {
+				if (isMounted) {
+					setLoading(false);
+				}
+			}
+		};
+
+		void fetchInitialPolls();
+
 		const interval = setInterval(() => {
 			void refreshPollsSilently();
 		}, 3000);
-		return () => clearInterval(interval);
+
+		return () => {
+			isMounted = false;
+			clearInterval(interval);
+		};
 	}, []);
 
 	// Real-time WebSocket connection for live instant updates across all users!
@@ -92,7 +152,7 @@ export default function PollPage() {
 			console.log("⚡ Connected to live Poll WebSockets");
 		});
 
-		socket.on("poll_updated", (data: any) => {
+		socket.on("poll_updated", (data: RawPollSocketUpdate) => {
 			if (!data || !data.pollId) return;
 
 			setPolls((prev) =>
@@ -104,7 +164,7 @@ export default function PollPage() {
 						let totalVotes = 0;
 						let userVotedTrack: string | null = null;
 
-						const optionsWithCounts = data.options.map((opt: any) => {
+						const optionsWithCounts = data.options.map((opt: RawSocketOption) => {
 							const votersList = Array.isArray(opt.voters) ? opt.voters.map(String) : [];
 							const voteCount = votersList.length;
 							totalVotes += voteCount;
@@ -175,7 +235,12 @@ export default function PollPage() {
 	}, [toast]);
 
 	// Tracks list per game
-	const availableTracks = pollGame === "ACC" ? Object.keys(acctracks) : [];
+	const availableTracks =
+		pollGame === "ACC"
+			? Object.keys(acctracks)
+			: pollGame === "LMU"
+			? Object.keys(lmuTracks)
+			: Array.from(new Set([...Object.keys(acctracks), ...Object.keys(lmuTracks)]));
 
 	const toggleTrackSelection = (track: string) => {
 		setSelectedTracks((prev) =>
@@ -251,6 +316,11 @@ export default function PollPage() {
 	};
 
 	const handleVote = async (pollId: string, track: string) => {
+		if (!user) {
+			setToast({ message: "🔒 Please log in with Steam to vote on race track polls.", type: "error" });
+			return;
+		}
+
 		try {
 			setVotingPollId(pollId);
 			const updatedPoll = await votePoll(pollId, track);
@@ -413,80 +483,115 @@ export default function PollPage() {
 						</p>
 					</Card>
 				) : (
-					<div className="grid gap-6 grid-cols-1">
+					<div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 						{filteredPolls.map((poll) => {
-							const isClosed = poll.status === "closed";
-							const isVoting = votingPollId === poll._id;
-
-							// Find winner track option if closed
-							let winningTrack: string | null = null;
-							if (isClosed && poll.totalVotes > 0) {
-								const maxVotes = Math.max(...poll.options.map((o) => o.voteCount));
-								if (maxVotes > 0) {
-									winningTrack = poll.options.find((o) => o.voteCount === maxVotes)?.track || null;
-								}
-							}
+							const isClosed = poll.status === "closed" || Boolean(poll.expiresAt && new Date(poll.expiresAt).getTime() <= Date.now());
+							const leadingOption = poll.options.length > 0
+								? poll.options.reduce((max, opt) => (opt.voteCount > max.voteCount ? opt : max), poll.options[0])
+								: null;
 
 							return (
 								<Card
 									key={poll._id}
-									className={`bg-[#0e1628] rounded-2xl border transition-all duration-300 p-6 shadow-2xl space-y-6 ${
+									className={`group bg-[#0e1628] rounded-2xl border transition-all duration-300 p-5 shadow-2xl flex flex-col justify-between overflow-hidden cursor-pointer ${
 										isClosed
-											? "border-white/10 opacity-90"
-											: "border-white/10 hover:border-cyan-400/50 hover:shadow-[0_0_30px_rgba(0,217,255,0.15)]"
+											? "border-white/10 opacity-95 hover:border-amber-400/40"
+											: "border-white/10 hover:border-cyan-400/60 hover:shadow-[0_0_25px_rgba(0,217,255,0.2)]"
 									}`}
+									onClick={() => setSelectedPollModal(poll)}
 								>
-									{/* Poll Card Header */}
-									<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-										<div className="flex items-center gap-3">
-											<img
-												src={gameLogos[poll.gameName] || "/Game/acc.png"}
-												alt={poll.gameName}
-												className="w-10 h-10 object-contain rounded-lg bg-black/40 p-1 border border-white/10 shrink-0"
-											/>
-											<div>
-												<div className="flex items-center gap-2">
-													<span className="font-mono-data text-[11px] font-bold text-cyan-400 uppercase tracking-widest">
+									{/* Poll Card Top */}
+									<div>
+										<div className="flex items-start justify-between gap-3">
+											<div className="flex items-center gap-3">
+												<img
+													src={gameLogos[poll.gameName] || "/Game/acc.png"}
+													alt={poll.gameName}
+													className="w-10 h-10 object-contain rounded-lg bg-black/40 p-1 border border-white/10 shrink-0"
+												/>
+												<div>
+													<span className="font-mono-data text-[10px] font-bold text-cyan-400 uppercase tracking-widest block">
 														{poll.gameName} POLL
 													</span>
-													{isClosed ? (
-														<span className="rounded-full bg-zinc-800 border border-zinc-600 text-zinc-300 px-2 py-0.5 font-mono-data text-[10px] font-bold flex items-center gap-1">
-															<Lock className="w-3 h-3" />
-															<span>CLOSED</span>
-														</span>
-													) : (
-														<span className="rounded-full bg-red-600/90 border border-red-400/70 text-white px-2 py-0.5 font-mono-data text-[10px] font-bold animate-pulse flex items-center gap-1 shadow-md">
-															<span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
-															<span>LIVE VOTING</span>
-														</span>
-													)}
+													<h3 className="font-sora text-base font-bold text-white leading-snug line-clamp-1 group-hover:text-cyan-300 transition-colors">
+														{poll.title}
+													</h3>
 												</div>
-												<h3 className="font-sora text-xl font-bold text-white mt-0.5">
-													{poll.title}
-												</h3>
 											</div>
+
+											{/* Status Badge */}
+											{isClosed ? (
+												<span className="rounded-full bg-zinc-800 border border-zinc-600 text-zinc-300 px-2.5 py-0.5 font-mono-data text-[10px] font-bold flex items-center gap-1 shrink-0">
+													<Lock className="w-3 h-3" />
+													<span>CLOSED</span>
+												</span>
+											) : (
+												<span className="rounded-full bg-red-600/90 border border-red-400/70 text-white px-2.5 py-0.5 font-mono-data text-[10px] font-bold animate-pulse flex items-center gap-1 shadow-md shrink-0">
+													<span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
+													<span>LIVE VOTING</span>
+												</span>
+											)}
 										</div>
 
-										<div className="flex items-center gap-3 self-end sm:self-auto">
-											<div className="text-right">
-												<span className="font-mono-data text-xs font-bold text-cyan-300 block">
-													📊 {poll.totalVotes} Total {poll.totalVotes === 1 ? "Vote" : "Votes"}
+										{/* P1 Leader Track Banner */}
+										<div className={`mt-4 rounded-xl border p-3 transition-all ${
+											isClosed
+												? "bg-amber-950/20 border-amber-500/30"
+												: "bg-cyan-950/20 border-cyan-500/30"
+										}`}>
+											<div className="flex items-center justify-between">
+												<span className={`font-mono-data text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+													isClosed ? "text-amber-400" : "text-cyan-400"
+												}`}>
+													{isClosed ? (
+														<>
+															<Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+															<span>FINISHED P1</span>
+														</>
+													) : (
+														<>
+															<Flag className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+															<span>CURRENTLY AT P1</span>
+														</>
+													)}
 												</span>
-												{poll.userVotedTrack && (
-													<span className="text-[10px] font-mono-data text-emerald-400 font-semibold block">
-														You voted: {poll.userVotedTrack}
+
+												{leadingOption && (
+													<span className={`font-mono-data text-[11px] font-bold ${isClosed ? "text-amber-300" : "text-cyan-300"}`}>
+														{leadingOption.percentage}% ({leadingOption.voteCount} {leadingOption.voteCount === 1 ? "vote" : "votes"})
 													</span>
 												)}
 											</div>
 
-											{/* Admin Action Controls */}
+											<div className="mt-1 flex items-center justify-between">
+												<span className={`font-sora text-sm font-extrabold truncate ${isClosed ? "text-amber-300 text-shadow" : "text-white"}`}>
+													{leadingOption && leadingOption.voteCount > 0 ? leadingOption.track : "No votes recorded yet"}
+												</span>
+											</div>
+										</div>
+									</div>
+
+									{/* Card Footer */}
+									<div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+										<div>
+											<span className="font-mono-data text-xs text-zinc-400 font-semibold block">
+												📊 {poll.totalVotes} Total {poll.totalVotes === 1 ? "Vote" : "Votes"}
+											</span>
+											{poll.userVotedTrack && (
+												<span className="text-[10px] font-mono-data text-emerald-400 font-semibold block">
+													✓ You voted: {poll.userVotedTrack}
+												</span>
+											)}
+										</div>
+
+										<div className="flex items-center gap-2">
 											{canManagePolls && (
-												<div className="flex items-center gap-1.5 border-l border-white/10 pl-3">
+												<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
 													<Button
 														size="sm"
 														variant="outline"
 														onPress={() => handleToggleStatus(poll._id)}
-														className={`font-mono-data text-xs px-3 py-1 rounded-full border ${
+														className={`font-mono-data text-[10px] px-2 py-0.5 rounded-full border ${
 															isClosed
 																? "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
 																: "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
@@ -498,117 +603,23 @@ export default function PollPage() {
 													<button
 														type="button"
 														onClick={() => handleDeletePoll(poll._id)}
-														className="p-1.5 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+														className="p-1 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
 														title="Delete Poll"
 													>
-														<Trash2 className="w-4 h-4" />
+														<Trash2 className="w-3.5 h-3.5" />
 													</button>
 												</div>
 											)}
+
+											<Button
+												size="sm"
+												onPress={() => setSelectedPollModal(poll)}
+												className="bg-cyan-400 text-slate-950 font-sora font-bold text-xs px-3.5 py-1.5 rounded-full glow-hover flex items-center gap-1 shrink-0"
+											>
+												<span>{isClosed ? "RESULTS" : "VOTE NOW"}</span>
+												<ChevronRight className="w-3.5 h-3.5" />
+											</Button>
 										</div>
-									</div>
-
-									{/* Track Options Voting List */}
-									<div className="space-y-3.5">
-										{poll.options.map((option) => {
-											const isUserChoice = poll.userVotedTrack === option.track;
-											const isWinner = isClosed && winningTrack === option.track;
-
-											return (
-												<div
-													key={option._id}
-													className={`relative rounded-xl border p-4 transition-all duration-200 overflow-hidden ${
-														isUserChoice
-															? "border-cyan-400 bg-cyan-950/20 shadow-[0_0_15px_rgba(0,217,255,0.2)]"
-															: isWinner
-															? "border-amber-400/80 bg-amber-950/20"
-															: "border-white/10 bg-white/[0.02] hover:border-white/20"
-													}`}
-												>
-													{/* Background Animated Progress Bar */}
-													<div
-														className={`absolute left-0 top-0 bottom-0 transition-all duration-500 pointer-events-none opacity-20 ${
-															isUserChoice
-																? "bg-cyan-400"
-																: isWinner
-																? "bg-amber-400"
-																: "bg-cyan-500"
-														}`}
-														style={{ width: `${option.percentage}%` }}
-													/>
-
-													<div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-														{/* Track Details */}
-														<div className="flex items-center gap-3">
-															<div
-																className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-																	isWinner
-																		? "bg-amber-400/20 border-amber-400 text-amber-300"
-																		: isUserChoice
-																		? "bg-cyan-400/20 border-cyan-400 text-cyan-300"
-																		: "bg-black/40 border-white/10 text-zinc-400"
-																}`}
-															>
-																{isWinner ? (
-																	<Trophy className="w-4 h-4 text-amber-400" />
-																) : (
-																	<Flag className="w-4 h-4" />
-																)}
-															</div>
-
-															<div>
-																<div className="flex items-center gap-2">
-																	<span className="font-sora font-bold text-base text-white">
-																		{option.track}
-																	</span>
-																	{isWinner && (
-																		<span className="rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-[10px] font-mono-data font-bold px-2 py-0.5 flex items-center gap-1">
-																			<Trophy className="w-3 h-3 text-amber-400" />
-																			<span>WINNER</span>
-																		</span>
-																	)}
-																</div>
-
-																{/* Percentage & Vote Count */}
-																<div className="flex items-center gap-2 mt-0.5">
-																	<span className="font-mono-data text-xs font-bold text-cyan-300">
-																		{option.percentage}%
-																	</span>
-																	<span className="text-zinc-500 text-xs">•</span>
-																	<span className="font-mono-data text-xs text-zinc-400">
-																		{option.voteCount} {option.voteCount === 1 ? "vote" : "votes"}
-																	</span>
-																</div>
-															</div>
-														</div>
-
-														{/* Action / Status Button */}
-														<div>
-															{isUserChoice ? (
-																<div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 px-4 py-1.5 font-mono-data text-xs font-bold text-emerald-300 shadow-md">
-																	<CheckCircle2 className="w-4 h-4 text-emerald-400" />
-																	<span>YOUR VOTE</span>
-																</div>
-															) : isClosed ? (
-																<span className="font-mono-data text-xs font-semibold text-zinc-500">
-																	Final Result
-																</span>
-															) : (
-																<Button
-																	size="sm"
-																	isDisabled={isVoting}
-																	onPress={() => handleVote(poll._id, option.track)}
-																	className="bg-cyan-400/10 border border-cyan-400/40 hover:bg-cyan-400 hover:text-slate-950 text-cyan-300 font-mono-data text-xs font-bold px-4 py-1.5 rounded-full transition-all"
-																>
-																	<span>{poll.userVotedTrack ? "SWITCH VOTE" : "VOTE TRACK"}</span>
-																	<ChevronRight className="w-3.5 h-3.5" />
-																</Button>
-															)}
-														</div>
-													</div>
-												</div>
-											);
-										})}
 									</div>
 								</Card>
 							);
@@ -791,6 +802,257 @@ export default function PollPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Poll Detail & Voting Modal */}
+			{selectedPollModal && (() => {
+				const poll = selectedPollModal;
+				const isClosed = poll.status === "closed" || Boolean(poll.expiresAt && new Date(poll.expiresAt).getTime() <= Date.now());
+				const isVoting = votingPollId === poll._id;
+
+				let winningTrack: string | null = null;
+				let leadingOption: PollOption | null = null;
+				if (poll.options.length > 0) {
+					leadingOption = poll.options.reduce((max, opt) => (opt.voteCount > max.voteCount ? opt : max), poll.options[0]);
+					if (isClosed && poll.totalVotes > 0 && leadingOption.voteCount > 0) {
+						winningTrack = leadingOption.track;
+					}
+				}
+
+				return (
+					<div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md overflow-y-auto">
+						<div className="flex min-h-full items-start justify-center px-4 py-8">
+							<div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0e1628] p-6 sm:p-8 shadow-2xl space-y-6 my-auto">
+								{/* Modal Header */}
+								<div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+									<div className="flex items-center gap-3">
+										<img
+											src={gameLogos[poll.gameName] || "/Game/acc.png"}
+											alt={poll.gameName}
+											className="w-12 h-12 object-contain rounded-xl bg-black/40 p-1.5 border border-white/10 shrink-0"
+										/>
+										<div>
+											<div className="flex items-center gap-2">
+												<span className="font-mono-data text-xs font-bold text-cyan-400 uppercase tracking-widest">
+													{poll.gameName} POLL
+												</span>
+												{isClosed ? (
+													<span className="rounded-full bg-zinc-800 border border-zinc-600 text-zinc-300 px-2.5 py-0.5 font-mono-data text-[10px] font-bold flex items-center gap-1">
+														<Lock className="w-3 h-3" />
+														<span>CLOSED</span>
+													</span>
+												) : (
+													<span className="rounded-full bg-red-600/90 border border-red-400/70 text-white px-2.5 py-0.5 font-mono-data text-[10px] font-bold animate-pulse flex items-center gap-1 shadow-md">
+														<span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
+														<span>LIVE VOTING</span>
+													</span>
+												)}
+											</div>
+											<h2 className="font-sora text-2xl font-black text-white mt-1">
+												{poll.title}
+											</h2>
+										</div>
+									</div>
+
+									<button
+										type="button"
+										onClick={() => setSelectedPollModal(null)}
+										className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white shrink-0"
+									>
+										<X className="w-5 h-5" />
+									</button>
+								</div>
+
+								{/* P1 Leader Banner */}
+								<div className={`rounded-xl border p-4 transition-all ${
+									isClosed ? "bg-amber-950/30 border-amber-500/40" : "bg-cyan-950/30 border-cyan-500/40"
+								}`}>
+									<div className="flex items-center justify-between">
+										<span className={`font-mono-data text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+											isClosed ? "text-amber-400" : "text-cyan-400"
+										}`}>
+											{isClosed ? (
+												<>
+													<Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+													<span>FINISHED P1</span>
+												</>
+											) : (
+												<>
+													<Flag className="w-4 h-4 text-cyan-400 shrink-0" />
+													<span>CURRENTLY AT P1</span>
+												</>
+											)}
+										</span>
+
+										{leadingOption && (
+											<span className={`font-mono-data text-xs font-bold ${isClosed ? "text-amber-300" : "text-cyan-300"}`}>
+												{leadingOption.percentage}% ({leadingOption.voteCount} {leadingOption.voteCount === 1 ? "vote" : "votes"})
+											</span>
+										)}
+									</div>
+
+									<h3 className={`font-sora text-lg font-black mt-1 ${isClosed ? "text-amber-300" : "text-white"}`}>
+										{leadingOption && leadingOption.voteCount > 0 ? leadingOption.track : "No votes recorded yet"}
+									</h3>
+								</div>
+
+								{/* Track Options Voting List */}
+								<div className="space-y-3">
+									<div className="flex items-center justify-between">
+										<span className="font-mono-data text-xs font-bold text-cyan-400 uppercase">
+											SELECT TRACK OPTION TO VOTE
+										</span>
+										<span className="font-mono-data text-xs font-bold text-cyan-300">
+											📊 {poll.totalVotes} Total {poll.totalVotes === 1 ? "Vote" : "Votes"}
+										</span>
+									</div>
+
+									{poll.options.map((option) => {
+										const isUserChoice = poll.userVotedTrack === option.track;
+										const isWinner = isClosed && winningTrack === option.track;
+
+										return (
+											<div
+												key={option._id}
+												className={`relative rounded-xl border p-4 transition-all duration-200 overflow-hidden ${
+													isUserChoice
+														? "border-cyan-400 bg-cyan-950/20 shadow-[0_0_15px_rgba(0,217,255,0.2)]"
+														: isWinner
+														? "border-amber-400/80 bg-amber-950/20"
+														: "border-white/10 bg-white/[0.02] hover:border-white/20"
+												}`}
+											>
+												{/* Background Progress Bar */}
+												<div
+													className={`absolute left-0 top-0 bottom-0 transition-all duration-500 pointer-events-none opacity-20 ${
+														isUserChoice
+															? "bg-cyan-400"
+															: isWinner
+															? "bg-amber-400"
+															: "bg-cyan-500"
+													}`}
+													style={{ width: `${option.percentage}%` }}
+												/>
+
+												<div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+													{/* Track Details */}
+													<div className="flex items-center gap-3">
+														<div
+															className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+																isWinner
+																	? "bg-amber-400/20 border-amber-400 text-amber-300"
+																	: isUserChoice
+																	? "bg-cyan-400/20 border-cyan-400 text-cyan-300"
+																	: "bg-black/40 border-white/10 text-zinc-400"
+															}`}
+														>
+															{isWinner ? (
+																<Trophy className="w-4 h-4 text-amber-400" />
+															) : (
+																<Flag className="w-4 h-4" />
+															)}
+														</div>
+
+														<div>
+															<div className="flex items-center gap-2">
+																<span className="font-sora font-bold text-base text-white">
+																	{option.track}
+																</span>
+																{isWinner && (
+																	<span className="rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-[10px] font-mono-data font-bold px-2 py-0.5 flex items-center gap-1">
+																		<Trophy className="w-3 h-3 text-amber-400" />
+																		<span>WINNER</span>
+																	</span>
+																)}
+															</div>
+
+															{/* Percentage & Vote Count */}
+															<div className="flex items-center gap-2 mt-0.5">
+																<span className="font-mono-data text-xs font-bold text-cyan-300">
+																	{option.percentage}%
+																</span>
+																<span className="text-zinc-500 text-xs">•</span>
+																<span className="font-mono-data text-xs text-zinc-400">
+																	{option.voteCount} {option.voteCount === 1 ? "vote" : "votes"}
+																</span>
+															</div>
+														</div>
+													</div>
+
+													{/* Action / Status Button */}
+													<div>
+														{isUserChoice ? (
+															<div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 px-4 py-1.5 font-mono-data text-xs font-bold text-emerald-300 shadow-md">
+																<CheckCircle2 className="w-4 h-4 text-emerald-400" />
+																<span>YOUR VOTE</span>
+															</div>
+														) : isClosed ? (
+															<span className="font-mono-data text-xs font-semibold text-zinc-500">
+																Final Result
+															</span>
+														) : (
+															<Button
+																size="sm"
+																isDisabled={isVoting}
+																onPress={() => handleVote(poll._id, option.track)}
+																className="bg-cyan-400/10 border border-cyan-400/40 hover:bg-cyan-400 hover:text-slate-950 text-cyan-300 font-mono-data text-xs font-bold px-4 py-1.5 rounded-full transition-all"
+															>
+																<span>{poll.userVotedTrack ? "SWITCH VOTE" : "VOTE TRACK"}</span>
+																<ChevronRight className="w-3.5 h-3.5" />
+															</Button>
+														)}
+													</div>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+
+								{/* Modal Footer / Actions */}
+								<div className="flex items-center justify-between border-t border-white/10 pt-4">
+									<div>
+										{canManagePolls && (
+											<div className="flex items-center gap-2">
+												<Button
+													size="sm"
+													variant="outline"
+													onPress={() => handleToggleStatus(poll._id)}
+													className={`font-mono-data text-xs px-3 py-1 rounded-full border ${
+														isClosed
+															? "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+															: "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+													}`}
+												>
+													{isClosed ? "REOPEN POLL" : "CLOSE POLL"}
+												</Button>
+
+												<button
+													type="button"
+													onClick={() => {
+														setSelectedPollModal(null);
+														handleDeletePoll(poll._id);
+													}}
+													className="p-2 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+													title="Delete Poll"
+												>
+													<Trash2 className="w-4 h-4" />
+												</button>
+											</div>
+										)}
+									</div>
+
+									<Button
+										variant="outline"
+										onPress={() => setSelectedPollModal(null)}
+										className="border-white/20 text-zinc-300 font-mono-data text-xs py-2 px-6 rounded-full hover:bg-white/10"
+									>
+										CLOSE
+									</Button>
+								</div>
+							</div>
+						</div>
+					</div>
+				);
+			})()}
 		</main>
 	);
 }
