@@ -60,9 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error("NEXT_PUBLIC_API_URL is not configured");
         }
 
+        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+        const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
         const response = await fetch(`${API_URL}/auth/me`, {
           method: "GET",
           credentials: "include",
+          headers: {
+            ...authHeader,
+          },
         });
 
         if (!response.ok) {
