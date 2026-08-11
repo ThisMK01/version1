@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   console.log("🔥🔥 AUTH PROVIDER IS RUNNING");
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adminMode, setAdminModeState] = useState(false);
+  const [adminModeState, setAdminModeState] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -112,12 +112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isEffectiveAdmin = Boolean(user && user.role === "admin" && adminModeState);
+
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
-        adminMode,
+        adminMode: isEffectiveAdmin,
         setAdminMode,
         logout,
       }}
