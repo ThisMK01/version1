@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { LoaderCircle, Radio } from "lucide-react";
 
@@ -8,17 +8,23 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 function AuthCallbackContent() {
     const searchParams = useSearchParams();
+    const hasExchangedRef = useRef(false);
 
     useEffect(() => {
+        const code = searchParams.get("code");
+
+        if (!code) {
+            console.error("❌ No authentication code");
+            window.location.replace("/");
+            return;
+        }
+
+        if (hasExchangedRef.current) {
+            return;
+        }
+        hasExchangedRef.current = true;
+
         const exchangeCode = async () => {
-            const code = searchParams.get("code");
-
-            if (!code) {
-                console.error("❌ No authentication code");
-                window.location.replace("/");
-                return;
-            }
-
             if (!API_URL) {
                 console.error("❌ NEXT_PUBLIC_API_URL is missing");
                 window.location.replace("/");
