@@ -176,6 +176,7 @@ export type AccEntryList = {
 			lastName: string;
 			shortName: string;
 			driverCategory: number;
+			playerID?: string;
 			nationality: number;
 		}>;
 	}>;
