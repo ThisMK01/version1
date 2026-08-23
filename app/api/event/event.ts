@@ -43,6 +43,7 @@ async function readResponse(response: Response) {
 	}
 
 	const data = JSON.parse(body) as {
+		event?: EventItem;
 		events?: EventItem[];
 		message?: string;
 		imageUrl?: string;
@@ -76,6 +77,15 @@ export async function getEvents(): Promise<EventItem[]> {
 	const response = await fetch(`${getApiUrl()}/events`);
 	const data = await readResponse(response);
 	return data.events || [];
+}
+
+export async function getEvent(eventId: string): Promise<EventItem> {
+	const response = await fetch(`${getApiUrl()}/events/${eventId}`);
+	const data = await readResponse(response) as { event?: EventItem };
+	if (!data.event) {
+		throw new Error("Event not found");
+	}
+	return data.event;
 }
 
 export async function getCarClasses(game: string): Promise<CarClass[]> {
@@ -191,3 +201,12 @@ export async function getAccEntryList(eventId: string): Promise<AccEntryList> {
 	}
 	return JSON.parse(body) as AccEntryList;
 }
+
+export async function getRaceResults(eventId: string): Promise<any> {
+	const response = await fetch(`${getApiUrl()}/race-results/${eventId}`);
+	if (!response.ok) {
+		throw new Error("Failed to fetch race results");
+	}
+	return response.json();
+}
+
